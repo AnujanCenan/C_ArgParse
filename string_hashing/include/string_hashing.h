@@ -14,7 +14,7 @@ typedef uint64_t hash_t;
 struct String_HT_Item
 {
     char* key;
-    void* value;
+    void* value;        // assumes the value is on the heap
     hash_t hash;
     bool tombstone;
 };

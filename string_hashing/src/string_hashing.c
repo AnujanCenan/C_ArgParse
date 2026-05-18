@@ -18,7 +18,8 @@ int string_hash(char* key);
 /**
  * One of those algorithms for exponentiation when you have a modulus involved
  */
-hash_t power_mod(hash_t base, hash_t exp, hash_t mod) {
+hash_t power_mod(hash_t base, hash_t exp, hash_t mod) 
+{
     int res = 1;
     base %= mod;
     while (exp > 0) {
@@ -227,7 +228,12 @@ void hash_set_free(String_Hash_Table* h)
 {
     for (int i = 0; i < h->capacity; ++i)
     {
-        if (h->ht[i]) free(h->ht[i]);
+        if (h->ht[i]) 
+        {
+            free(h->ht[i]->value);
+            free(h->ht[i]);
+
+        }
     }
     free(h->ht);
     free(h);
