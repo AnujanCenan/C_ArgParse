@@ -1,62 +1,58 @@
-#include "string_hashing.h"
+#include "arg_parse.h"
 
 #define MAX_POS_ARGS 10
 
-enum Arg_Type
+#define TRUE_LIT "true"
+#define FALSE_LIT "false"
+
+/// Function declarations
+
+void free_argument_item(String_HT_Item* item);
+void free_int_item(String_HT_Item* item);
+
+/**
+ * Helper function for the parsing process
+ * - parser = the parser object used for the parsing process
+ * - flag = the actual flag you are up to (e.g. "-a", "--xtreme")
+ * - argc, argv = the same argc and argv obtained from the main function
+ * - index: the index that points to the current flag in argv
+ *          i.e. argv[index] == flag
+ */
+Argument* add_flag_value(
+    Arg_Parser* parser, 
+    String flag, 
+    int argc, String argv[], 
+    int index
+);
+
+
+/// Function Definitions
+
+void free_argument_item(String_HT_Item* item)
 {
-    BOOL = 'b',
-    STRING = 's',
-    INT = 'i',
-    FLOAT = 'f',
-    DOUBLE = 'd'
-};
+    Argument* arg = (Argument*) item->value;
+    arg->ref_count--;
+    if (arg->ref_count == 0)
+    {
+        free(arg);
+    }
+    free(item);
+}
 
-
-typedef enum Arg_Type Arg_Type;
-typedef char* String;
-typedef struct Argument Argument;
-typedef struct Arg_Parser Arg_Parser;
-
-static String true_lit = "true";
-
-
-struct Argument
+void free_int_item(String_HT_Item* item)
 {
-    String value;
-    Arg_Type type;
-    bool optional;
-};
-
-// struct Flag_Parser
-
-// struct Positional_Arg_Parser
-
-struct Arg_Parser
-{
-    String_Hash_Table* flag_values;
-    
-    String_Hash_Table* long_to_short;       // translate long flag to short flag
-    String_Hash_Table* short_to_long;       // translate short flag to long flag
-
-
-    String_Hash_Table* map_arg_pos;
-    Argument** positional_arguments;
-    int num_pos_args;
-    int curr_pos_arg;
-};
-
+    free(item->value);
+    free(item);
+}
 
 
 Arg_Parser* arg_parser_init()
 {
     Arg_Parser* parser = malloc(sizeof(Arg_Parser));
-    parser->flag_values = string_hashtable_init();
-    parser->short_to_long = string_hashtable_init();
-    parser->long_to_short = string_hashtable_init();
+    parser->flag_values = string_hashtable_init(&free_argument_item);
 
-    parser->map_arg_pos = string_hashtable_init();
+    parser->map_arg_pos = string_hashtable_init(&free_int_item);
     parser->positional_arguments = malloc(MAX_POS_ARGS * sizeof(Argument*));
-    
     parser->num_pos_args = 0;
     parser->curr_pos_arg = 0;
 
@@ -81,17 +77,27 @@ void arg_parser_add_pos_arg(Arg_Parser* parser, String arg_name, Arg_Type type)
     arg->value = NULL;
     arg->optional = false;
     arg->type = type;
+    arg->default_value = NULL;
+    arg->ref_count = 1;
 
     int* pos = malloc(sizeof(int));
     *pos = parser->num_pos_args;
+
+    if (string_hashtable_get(parser->map_arg_pos, arg_name))
+    {
+        fprintf(stderr, "Arg_Parser::arg_parser_add_pos_arg: Duplicate argument detected\n");
+        exit(1);
+    }
 
     string_hashtable_add(&(parser->map_arg_pos), arg_name, pos);
     parser->positional_arguments[parser->num_pos_args++] = arg;
 }
 
+// Note that default_value is allowed to be NULL
 void arg_parser_add_flag(
     Arg_Parser* parser, 
     String short_option, String long_option, 
+    String default_value,
     Arg_Type type, 
     bool optional
 )
@@ -102,24 +108,37 @@ void arg_parser_add_flag(
         exit(1);
     }
 
+    if (type == BOOL && !optional)
+    {
+        fprintf(stderr, "Arg_Parser::arg_parser_add_flag: WARNING -- setting a boolean flag as NOT optional renders the flag redundant\n");
+    }
+
     Argument* arg = malloc(sizeof(Argument));
     arg->value = NULL;
     arg->optional = optional;
     arg->type = type;
-
-    if (short_option && long_option)
-    {
-        string_hashtable_add(&(parser->long_to_short), short_option, strdup(long_option));
-        string_hashtable_add(&(parser->long_to_short), long_option, strdup(short_option));
-    }
+    arg->default_value = default_value;
+    arg->ref_count = 0;
 
     if (short_option)
     {
+        if (string_hashtable_get(parser->flag_values, short_option))
+        {
+            fprintf(stderr, "ArgParse::arg_parser_add_flag: Duplicate argument detected\n");
+            exit(1);
+        }
+        arg->ref_count++;
         string_hashtable_add(&(parser->flag_values), short_option, arg);
     }
 
     if (long_option)
     {
+        if (string_hashtable_get(parser->flag_values, long_option))
+        {
+            fprintf(stderr, "ArgParse::arg_parser_add_flag: Duplicate argument detected\n");
+            exit(1);
+        }
+        arg->ref_count++;
         string_hashtable_add(&(parser->flag_values), long_option, arg);
     }
 }
@@ -134,14 +153,14 @@ Argument* add_flag_value(Arg_Parser* parser, String flag, int argc, String argv[
 
     if (arg->type == BOOL)
     {
-        arg->value = strdup("true");
+        arg->value = TRUE_LIT; 
     } else if (index + 1 >= argc)
     {
-        fprintf(stderr, "Argument %d requires a value\n", index);
+        fprintf(stderr, "Arg_Parser::add_flag_value: Argument index=%d requires a value\n", index);
         exit(1);
     } else
     {
-        arg->value = strdup(argv[index + 1]);
+        arg->value = argv[index + 1];
     }
 
     return arg;
@@ -233,6 +252,28 @@ void arg_parser_parse(Arg_Parser* parser, int argc, String argv[])
         fprintf(stderr, "It seems we have not provided enough positional arguments\n");
         exit(1);
     }
+
+
+    for (int i = 0; i < parser->flag_values->capacity; ++i)
+    {
+        if (!parser->flag_values->ht[i] || parser->flag_values->ht[i]->tombstone) continue;
+        Argument* arg =  (Argument*) parser->flag_values->ht[i]->value;
+        if (!arg->value && arg->type == BOOL)
+        {
+            arg->value = FALSE_LIT;
+        } else if (!arg->value && arg->default_value)
+        {
+            arg->value = arg->default_value;
+        } else if (!arg->value && !arg->optional)
+        {
+            fputs("Argument given is not optional\n\t", stderr);
+            fputs(parser->flag_values->ht[i]->key, stderr);
+            fputs("\n", stderr);
+            exit(1);
+        }
+    }
+
+
 }
 
 Argument* arg_parser_get(Arg_Parser* parser, String arg_name)
@@ -260,9 +301,24 @@ Argument* arg_parser_get(Arg_Parser* parser, String arg_name)
     }
 }
 
-
-int main(int argc, String argv[])
+// Debugging only
+void print_arg_value(Arg_Parser* parser, String arg_name)
 {
-    Arg_Parser* parser = arg_parser_init();
-    return 0;
+    Argument* arg = arg_parser_get(parser, arg_name);
+    printf("%s == %s\n", arg_name, arg->value);
+}
+
+void arg_parser_free(Arg_Parser* parser)
+{
+
+    string_hashtable_free(parser->flag_values);
+    string_hashtable_free(parser->map_arg_pos);
+
+    for (int i = 0; i < parser->num_pos_args; ++i)
+    {
+        free(parser->positional_arguments[i]);
+    }
+
+    free(parser->positional_arguments);
+    free(parser);
 }
