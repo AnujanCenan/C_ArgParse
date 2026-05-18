@@ -18,7 +18,8 @@ int string_hash(char* key);
 /**
  * One of those algorithms for exponentiation when you have a modulus involved
  */
-hash_t power_mod(hash_t base, hash_t exp, hash_t mod) {
+hash_t power_mod(hash_t base, hash_t exp, hash_t mod) 
+{
     int res = 1;
     base %= mod;
     while (exp > 0) {
@@ -29,13 +30,14 @@ hash_t power_mod(hash_t base, hash_t exp, hash_t mod) {
     return res;
 }
 
-String_Hash_Table* string_hashtable_init()
+String_Hash_Table* string_hashtable_init(Item_Free_Fn item_free)
 {
     String_Hash_Table* ht = malloc(sizeof(String_Hash_Table));
     ht->ht = calloc(STRING_HT_MIN_SIZE,  sizeof(String_HT_Item*));
     ht->capacity = STRING_HT_MIN_SIZE;
     ht->num_active = 0;
     ht->num_elements = 0;
+    ht->item_free = item_free;
 
     return ht;
 }
@@ -113,9 +115,6 @@ void string_hashtable_add(String_Hash_Table** h, char* key, void* value)
     hash_t hash = string_hash(key);
     int start = hash & ((*h)->capacity - 1);
 
-    printf("For key = %s; hash = %llu; therefore start = %d\n", key, hash, start);
-
-
     int index = start;
     int first_tombstone = TOMBSTONE_NOT_FOUND;       // -1 means not found here
     bool already_exists = false;
@@ -152,7 +151,6 @@ void string_hashtable_add(String_Hash_Table** h, char* key, void* value)
 
     if (first_tombstone == TOMBSTONE_NOT_FOUND)
     {
-        printf("Adding %s to index %d\n", key, index);
         (*h)->ht[index] = item;
     } else
     {
@@ -223,11 +221,19 @@ void string_hashtable_print(String_Hash_Table* h)
 }
 
 
-void hash_set_free(String_Hash_Table* h)
+void string_hashtable_free(String_Hash_Table* h)
 {
     for (int i = 0; i < h->capacity; ++i)
     {
-        if (h->ht[i]) free(h->ht[i]);
+        if (!h->ht[i]) continue;
+
+        if (h->item_free)
+        {
+            h->item_free(h->ht[i]);
+        } else
+        {
+            free(h->ht[i]);
+        }
     }
     free(h->ht);
     free(h);
