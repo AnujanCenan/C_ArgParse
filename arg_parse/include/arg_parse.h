@@ -1,7 +1,8 @@
 #include "string_hashing.h"
+#include "string_type.h"
 
 typedef enum Arg_Type Arg_Type;
-typedef char* String;
+// typedef char* String;
 typedef struct Argument Argument;
 typedef struct Arg_Parser Arg_Parser;
 
