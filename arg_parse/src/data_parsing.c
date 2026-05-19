@@ -1,9 +1,4 @@
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include "string_type.h"
-
+#include "data_parse.h"
 
 int get_digit(char c)
 {
@@ -106,22 +101,3 @@ String parse_string(String s)
     return s;
 }
 
-
-int main()
-{
-    int x = parse_int("123");
-    printf("int = %d\n", 123);
-
-    bool b = parse_bool("true");
-    printf("bool = %d\n", b);
-
-    float f = parse_float("841.3904");
-    printf("float = %f\n", f);
-
-    double d = parse_double("1432.2131243");
-    printf("double = %lf\n", d);
-
-    String s = parse_string("sdalfjasd;fjd;adfsjjfio;xajsdfiocewfunopv");
-    printf("string = %s\n", s);
-    return 0;
-}
