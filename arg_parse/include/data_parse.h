@@ -1,3 +1,6 @@
+#ifndef DATA_PARSE_H
+#define DATA_PARSE_H
+
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,3 +12,5 @@ bool parse_bool(String s);
 double parse_double(String s);
 float parse_float(String s);
 String parse_string(String s);
+
+#endif
