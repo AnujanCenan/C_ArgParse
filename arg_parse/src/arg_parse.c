@@ -2,8 +2,8 @@
 
 #define MAX_POS_ARGS 10
 
-#define TRUE_LIT "true"
-#define FALSE_LIT "false"
+#define TRUE_LIT "1"
+#define FALSE_LIT "0"
 
 /// Function declarations
 
