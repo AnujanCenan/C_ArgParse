@@ -1,4 +1,6 @@
 // Based on the article at https://cp-algorithms.com/string/string-hashing.html
+#ifndef STRING_HASHING_H
+#define STRING_HASHING_H
 
 #include <stdio.h>
 #include <stdbool.h>
@@ -37,3 +39,5 @@ void* string_hashtable_get(String_Hash_Table* h, char* key);
 void string_hashtable_delete(String_Hash_Table* h, char* key);
 void string_hashtable_print(String_Hash_Table* h);
 void string_hashtable_free(String_Hash_Table* h);
+
+#endif

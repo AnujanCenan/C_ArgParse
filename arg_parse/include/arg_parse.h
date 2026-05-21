@@ -1,7 +1,11 @@
+#ifndef ARG_PARSE_H
+#define ARG_PARSE_H
+
 #include "string_hashing.h"
+#include "string_type.h"
 
 typedef enum Arg_Type Arg_Type;
-typedef char* String;
+// typedef char* String;
 typedef struct Argument Argument;
 typedef struct Arg_Parser Arg_Parser;
 
@@ -93,3 +97,5 @@ void arg_parser_free(Arg_Parser* parser);
  * value that the user gave to correspond to that argument.
  */
 void print_arg_value(Arg_Parser* parser, String arg_name);
+
+#endif
