@@ -49,9 +49,9 @@ void free_int_item(String_HT_Item* item)
 Arg_Parser* arg_parser_init()
 {
     Arg_Parser* parser = malloc(sizeof(Arg_Parser));
-    parser->flag_values = string_hashtable_init(&free_argument_item);
+    parser->flag_values = string_hashtable_init(free_argument_item);
 
-    parser->map_arg_pos = string_hashtable_init(&free_int_item);
+    parser->map_arg_pos = string_hashtable_init(free_int_item);
     parser->positional_arguments = malloc(MAX_POS_ARGS * sizeof(Argument*));
     parser->num_pos_args = 0;
     parser->curr_pos_arg = 0;
@@ -278,16 +278,15 @@ void arg_parser_parse(Arg_Parser* parser, int argc, String argv[])
 
 Argument* arg_parser_get(Arg_Parser* parser, String arg_name)
 {
+    Argument* arg = NULL;
     if (arg_name[0] == '-')
     {
-        Argument* arg = (Argument*) string_hashtable_get(parser->flag_values, arg_name);
+        arg = (Argument*) string_hashtable_get(parser->flag_values, arg_name);
         if (!arg)
         {
             fprintf(stderr, "ArgParser::arg_parser_get: it appears argument %s does not exist\n", arg_name);
             exit(1);
         }
-
-        return arg;
     } else
     {
         int* pos = (int*) string_hashtable_get(parser->map_arg_pos, arg_name);
@@ -296,9 +295,16 @@ Argument* arg_parser_get(Arg_Parser* parser, String arg_name)
             fprintf(stderr, "ArgParser::arg_parser_get: it appears argument %s does not exist\n", arg_name);
             exit(1);
         }
-        Argument* arg = parser->positional_arguments[*pos];
-        return arg;
+        arg = parser->positional_arguments[*pos];
     }
+    
+    if (arg->value == NULL) 
+    {
+        printf("Arg_Parse::arg_parser_get: WARNING: argument %s has a NULL value \
+            did you call arg_parser_parse?\n", arg_name);
+    }
+
+    return arg;
 }
 
 // Debugging only
