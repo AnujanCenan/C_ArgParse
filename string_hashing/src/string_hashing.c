@@ -51,6 +51,7 @@ void hash_set_resize(String_Hash_Table** h)
     hs_new->capacity = (*h)->capacity << 1;
     hs_new->num_elements = (*h)->num_active;
     hs_new->num_active = (*h)->num_active;
+    hs_new->item_free = (*h)->item_free;
 
 
     for (int i = 0; i < (*h)->capacity; ++i)
